@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#0b0e13"/>
+  <rect x="96" y="80" width="320" height="352" rx="20" fill="#11151c" stroke="#06b6d4" stroke-width="10"/>
+  <line x1="256" y1="104" x2="256" y2="408" stroke="#1f2a38" stroke-width="8"/>
+  <g fill="#06b6d4" font-family="serif" font-size="120" text-anchor="middle">
+    <text x="180" y="220">文</text>
+    <text x="332" y="320">字</text>
+  </g>
+</svg>
