@@ -113,8 +113,9 @@ export class Pipeline {
     const dets: LineBox[] = []
     for (let i = 0; i < scores.length; i++) {
       if (scores[i] <= DEIM_CONF_THRESHOLD) continue
-      let x1 = Math.round(boxes[i * 4] * scale), y1 = Math.round(boxes[i * 4 + 1] * scale)
-      let x2 = Math.round(boxes[i * 4 + 2] * scale), y2 = Math.round(boxes[i * 4 + 3] * scale)
+      // 本家 deim.py は (boxes*scale).astype(int32) ＝ ゼロ方向への切り捨て
+      let x1 = Math.trunc(boxes[i * 4] * scale), y1 = Math.trunc(boxes[i * 4 + 1] * scale)
+      let x2 = Math.trunc(boxes[i * 4 + 2] * scale), y2 = Math.trunc(boxes[i * 4 + 3] * scale)
       x1 = clamp(x1, 0, maxWH); x2 = clamp(x2, 0, maxWH); y1 = clamp(y1, 0, maxWH); y2 = clamp(y2, 0, maxWH)
       if (x2 - x1 < 1 || y2 - y1 < 1) continue
       const classIndex = Math.round(labels[i]) - 1
