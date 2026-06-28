@@ -198,16 +198,16 @@ export default function App() {
           <span className="name">{t('brand')}</span>
           <span className="tagline">{t('tagline')}</span>
         </div>
-        <div className="abar-right">
-          <a className="ghlink" href="https://github.com/thebigeaterr/kotenocr-web" target="_blank" rel="noreferrer">ソースコード</a>
-          <button className="help" onClick={() => setShowAbout(true)}>🔒 仕組みと安全性</button>
-        </div>
       </header>
 
       <main className="body">
         <div className="intro">
-          国立国会図書館「<strong>NDLkotenOCR-Lite</strong>」(CC BY 4.0) を<strong>ベースに</strong>再構築。
-          画像は<strong>あなたのパソコンの中だけ</strong>で処理され、外部に送信されません。
+          <div className="intro-text">
+            国立国会図書館「<strong>NDLkotenOCR-Lite</strong>」(CC BY 4.0) を<strong>ベースに</strong>再構築。
+            画像は<strong>あなたのパソコンの中だけ</strong>で処理され、外部に送信されません。
+          </div>
+          <button className="help" onClick={() => setShowAbout(true)}>🔒 仕組みと安全性</button>
+          <div className="intro-src">ソースコード: <a href="https://github.com/thebigeaterr/kotenocr-web" target="_blank" rel="noreferrer">github.com/thebigeaterr/kotenocr-web</a></div>
         </div>
 
         <div className="toolbar">

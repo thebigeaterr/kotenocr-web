@@ -12,8 +12,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg'],
       manifest: {
-        name: '古典籍OCR (ブラウザ完結)',
-        short_name: '古典籍OCR',
+        name: 'セキュアOCR (ブラウザ完結)',
+        short_name: 'セキュアOCR',
         description: 'ブラウザ内で完結する日本語OCR。インストール不要・画像はPC外に出ません。',
         lang: 'ja',
         theme_color: '#f1f3f4',

@@ -1,4 +1,4 @@
-# 古典籍OCR（ブラウザ完結版） / kotenocr-web
+# セキュアOCR（ブラウザ完結版） / kotenocr-web
 
 国立国会図書館の **NDLkotenOCR-Lite**（CC BY 4.0）のOCRエンジンを、**ブラウザ内だけで動く** Web アプリに移植したものです。
 onnxruntime-web（WASM）でDEIM（レイアウト検出）＋PARSeq（文字認識・カスケード3モデル）をブラウザ内実行します。
