@@ -1,0 +1,1 @@
+{"name":"セキュアOCR (ブラウザ完結)","short_name":"セキュアOCR","description":"ブラウザ内で完結する日本語OCR。インストール不要・画像はPC外に出ません。","start_url":".","display":"standalone","background_color":"#ffffff","theme_color":"#f1f3f4","lang":"ja","scope":".","icons":[{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}]}
