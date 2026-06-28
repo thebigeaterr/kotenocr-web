@@ -48,7 +48,7 @@ button { font-family: inherit; }
 .preview { flex: 1 1 auto; min-height: 0; }
 .pv-grid { height: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .imgwrap { height: 100%; overflow: auto; background: #f6f7f9; border: 1px solid var(--line); border-radius: 8px; position: relative; }
-.imgwrap.crop { cursor: crosshair; }
+.imgwrap.crop { cursor: crosshair; touch-action: none; }
 .imginner { position: relative; line-height: 0; }
 .imginner img { width: 100%; height: auto; display: block; user-select: none; }
 .overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }

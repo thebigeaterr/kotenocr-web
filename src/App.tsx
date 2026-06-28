@@ -121,21 +121,29 @@ export default function App() {
     } catch (err) { setError(String(err)) }
   }
 
-  // ---- 範囲を選んでOCR ----
-  const onMouseDown = (e: React.MouseEvent) => {
+  // ---- 範囲を選んでOCR（マウス＋タッチ両対応）----
+  const pt = (e: React.MouseEvent | React.TouchEvent) => {
+    const tt = (e as React.TouchEvent).touches
+    if (tt && tt.length) return { x: tt[0].clientX, y: tt[0].clientY }
+    const ce = (e as React.TouchEvent).changedTouches
+    if (ce && ce.length) return { x: ce[0].clientX, y: ce[0].clientY }
+    const me = e as React.MouseEvent
+    return { x: me.clientX, y: me.clientY }
+  }
+  const onDown = (e: React.MouseEvent | React.TouchEvent) => {
     if (!cropMode || !imgRef.current) return
-    const r = imgRef.current.getBoundingClientRect()
-    dragRef.current = { sx: e.clientX - r.left, sy: e.clientY - r.top }
+    const r = imgRef.current.getBoundingClientRect(); const p = pt(e)
+    dragRef.current = { sx: p.x - r.left, sy: p.y - r.top }
     setSel({ x: dragRef.current.sx, y: dragRef.current.sy, w: 0, h: 0 })
   }
-  const onMouseMove = (e: React.MouseEvent) => {
+  const onMove = (e: React.MouseEvent | React.TouchEvent) => {
     if (!dragRef.current || !imgRef.current) return
-    const r = imgRef.current.getBoundingClientRect()
-    const cx = e.clientX - r.left, cy = e.clientY - r.top
+    const r = imgRef.current.getBoundingClientRect(); const p = pt(e)
+    const cx = p.x - r.left, cy = p.y - r.top
     const { sx, sy } = dragRef.current
     setSel({ x: Math.min(sx, cx), y: Math.min(sy, cy), w: Math.abs(cx - sx), h: Math.abs(cy - sy) })
   }
-  const onMouseUp = async () => {
+  const onUp = async () => {
     if (!dragRef.current || !imgRef.current || !sel) { dragRef.current = null; return }
     dragRef.current = null
     const el = imgRef.current
@@ -172,6 +180,10 @@ export default function App() {
 
   const busy = status === 'loading' || status === 'running'
   const cur = results[idx] ?? null
+  // タッチ専用端末（スマホ等）では、対応していない機能を隠す
+  const isTouchOnly = typeof window !== 'undefined' && !!window.matchMedia && matchMedia('(pointer: coarse)').matches && !matchMedia('(pointer: fine)').matches
+  const canCapture = !isTouchOnly && typeof navigator !== 'undefined' && !!navigator.mediaDevices && typeof (navigator.mediaDevices as any).getDisplayMedia === 'function'
+  const canDir = supportsDirPicker()
 
   return (
     <div className="page">
@@ -193,18 +205,18 @@ export default function App() {
         <div className="toolbar">
           <div className="trow">
             <button className="outlined" disabled={busy} onClick={onPickImage}>📄 {t('processImage')}</button>
-            <button className="outlined" disabled={busy} onClick={onPickFolder}>📁 {t('processFolder')}</button>
+            {!isTouchOnly && <button className="outlined" disabled={busy} onClick={onPickFolder}>📁 {t('processFolder')}</button>}
             <span className="label">{t('target')}</span>
             <span className="path">{files.length ? (files.length === 1 ? files[0].name : `${files.length} 枚`) : '—'}</span>
             <span className="spacer" />
-            <button className="chip" disabled={busy} onClick={onCapture}
-              title="いま画面に表示しているもの（PDFビューアやWebページなど）を撮影して、その文字を読み取ります">🖥 {t('captureMode')}</button>
+            {canCapture && <button className="chip" disabled={busy} onClick={onCapture}
+              title="いま画面に表示しているもの（PDFビューアやWebページなど）を撮影して、その文字を読み取ります">🖥 {t('captureMode')}</button>}
             <input ref={fileInput} type="file" accept="image/*" hidden onChange={e => e.target.files && setTargets(Array.from(e.target.files))} />
             <input ref={folderInput} type="file" hidden multiple onChange={e => e.target.files && setTargets(Array.from(e.target.files))} />
           </div>
 
           <div className="trow">
-            <button className="outlined" disabled={busy} onClick={onSelectOutput}>{t('selectOutput')}</button>
+            {canDir && <button className="outlined" disabled={busy} onClick={onSelectOutput}>{t('selectOutput')}</button>}
             <span className="label">{t('output')}</span>
             <span className="path">{dirName || t('outputDownload')}</span>
             <span className="spacer" />
@@ -239,7 +251,8 @@ export default function App() {
           {urls[idx] ? (
             <div className="pv-grid">
               <div className={`imgwrap ${cropMode ? 'crop' : ''}`}
-                onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={() => { dragRef.current = null }}>
+                onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={() => { dragRef.current = null }}
+                onTouchStart={onDown} onTouchMove={onMove} onTouchEnd={onUp}>
                 <div className="imginner">
                   <img ref={imgRef} src={urls[idx]} alt="preview" draggable={false} />
                   {cur && (
