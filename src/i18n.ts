@@ -44,8 +44,8 @@ export const T = {
   noTarget: { ja: '処理対象を選択してください', en: 'Select target image(s) first' },
   done: { ja: '完了', en: 'Done' },
   privacy: {
-    ja: '処理はすべてブラウザ内で完結します（画像はPCの外に出ません）',
-    en: 'Everything runs in your browser (images never leave your PC)',
+    ja: '処理はすべてあなたのパソコンの中で完結します（画像はPCの外に出ません）',
+    en: 'Everything runs on your own PC (images never leave your PC)',
   },
   engine: {
     ja: '国立国会図書館 NDLkotenOCR-Lite (CC BY 4.0) をベースに、ブラウザ向けに再構築しています',

@@ -6,6 +6,10 @@ import './App.css'
 
 type Status = 'loading' | 'ready' | 'running'
 const lang: Lang = 'ja'
+const SAMPLES = [
+  { file: 'sample_yoko.png', label: '横書き（活字）' },
+  { file: 'sample_tate.png', label: '縦書き（活字）' },
+]
 
 export default function App() {
   const workerRef = useRef<Worker | null>(null)
@@ -81,28 +85,41 @@ export default function App() {
     if (h) { setDir(h); setDirName(h.name) }
   }
 
-  const runOCR = useCallback(async () => {
-    if (files.length === 0) { setError(t('noTarget')); return }
+  const runList = useCallback(async (list: File[], listUrls: string[], save: boolean) => {
+    if (list.length === 0) { setError(t('noTarget')); return }
     cancelRef.current = false
     setStatus('running'); setError('')
-    const newResults = [...results]
-    for (let i = 0; i < files.length; i++) {
+    const newResults: (OcrResult | null)[] = list.map(() => null)
+    for (let i = 0; i < list.length; i++) {
       if (cancelRef.current) break
       setIdx(i)
-      setProgress(`${i + 1}/${files.length} ${files[i].name}`)
+      setProgress(`${i + 1}/${list.length} ${list[i].name}`)
       try {
-        const res = await runOne(files[i])
+        const res = await runOne(list[i])
         newResults[i] = res
         setResults([...newResults])
-        await saveOutputs(dir, files[i].name, urls[i], res, { ...fmt, viz })
+        if (save) await saveOutputs(dir, list[i].name, listUrls[i], res, { ...fmt, viz })
       } catch (err) { setError(String(err)) }
     }
     setStatus('ready')
     setProgress(cancelRef.current ? t('cancelRequested') : t('done'))
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [files, urls, results, dir, fmt, viz])
+  }, [dir, fmt, viz])
 
+  const runOCR = () => runList(files, urls, true)
   const stopOCR = () => { cancelRef.current = true; setProgress(t('cancelRequested')) }
+
+  const onSample = async (name: string) => {
+    try {
+      const res = await fetch(import.meta.env.BASE_URL + 'samples/' + name)
+      const blob = await res.blob()
+      const file = new File([blob], name, { type: blob.type || 'image/png' })
+      urls.forEach(u => URL.revokeObjectURL(u))
+      const url = URL.createObjectURL(blob)
+      setFiles([file]); setUrls([url]); setResults([null]); setIdx(0); setError(''); setCropResult(null); setCropMode(false)
+      await runList([file], [url], false)
+    } catch (err) { setError(String(err)) }
+  }
 
   // ---- 範囲を選んでOCR ----
   const onMouseDown = (e: React.MouseEvent) => {
@@ -164,76 +181,56 @@ export default function App() {
           <span className="name">{t('brand')}</span>
           <span className="tagline">{t('tagline')}</span>
         </div>
+        <button className="help" onClick={() => setShowAbout(true)}>🔒 仕組みと安全性</button>
       </header>
 
       <main className="body">
-        {/* 出自と安全性の案内 */}
-        <div className="banner">
-          <div className="btxt">
-            これは、<strong>国立国会図書館</strong>のOCR「<strong>NDLkotenOCR-Lite</strong>」(CC BY 4.0) を<strong>ベースに</strong>、
-            インストール不要で<strong>ブラウザだけで動く</strong>ように再構築したものです。
-            画像は<strong>あなたのPCの中だけ</strong>で処理され、外部には送信されません。
+        <div className="intro">
+          国立国会図書館「<strong>NDLkotenOCR-Lite</strong>」(CC BY 4.0) を<strong>ベースに</strong>再構築。
+          画像は<strong>あなたのパソコンの中だけ</strong>で処理され、外部に送信されません。
+        </div>
+
+        <div className="toolbar">
+          <div className="trow">
+            <button className="outlined" disabled={busy} onClick={onPickImage}>📄 {t('processImage')}</button>
+            <button className="outlined" disabled={busy} onClick={onPickFolder}>📁 {t('processFolder')}</button>
+            <span className="label">{t('target')}</span>
+            <span className="path">{files.length ? (files.length === 1 ? files[0].name : `${files.length} 枚`) : '—'}</span>
+            <span className="spacer" />
+            <button className="chip" disabled={busy} onClick={onCapture}
+              title="いま画面に表示しているもの（PDFビューアやWebページなど）を撮影して、その文字を読み取ります">🖥 {t('captureMode')}</button>
+            <input ref={fileInput} type="file" accept="image/*" hidden onChange={e => e.target.files && setTargets(Array.from(e.target.files))} />
+            <input ref={folderInput} type="file" hidden multiple onChange={e => e.target.files && setTargets(Array.from(e.target.files))} />
           </div>
-          <button className="help" onClick={() => setShowAbout(true)}>🔒 仕組みと安全性</button>
-        </div>
 
-        <div className="row top">
-          <span className="explain">{t('explain')}</span>
-          <button className="chip" disabled={busy} onClick={onCapture}
-            title="いま画面に表示しているもの（PDFビューアやWebページなど）を撮影して、その文字を読み取ります">
-            🖥 {t('captureMode')}
-          </button>
-        </div>
-        <hr />
+          <div className="trow">
+            <button className="outlined" disabled={busy} onClick={onSelectOutput}>{t('selectOutput')}</button>
+            <span className="label">{t('output')}</span>
+            <span className="path">{dirName || t('outputDownload')}</span>
+            <span className="spacer" />
+            <span className="lbl">保存形式：</span>
+            <label className="check"><input type="checkbox" checked={fmt.txt} onChange={e => setFmt(s => ({ ...s, txt: e.target.checked }))} /> txt</label>
+            <label className="check"><input type="checkbox" checked={fmt.json} onChange={e => setFmt(s => ({ ...s, json: e.target.checked }))} /> JSON</label>
+            <label className="check"><input type="checkbox" checked={fmt.xml} onChange={e => setFmt(s => ({ ...s, xml: e.target.checked }))} /> XML</label>
+            <label className="check"><input type="checkbox" checked={viz} onChange={e => setViz(e.target.checked)} /> 可視化画像</label>
+          </div>
 
-        <div className="row">
-          <button className="outlined" disabled={busy} onClick={onPickImage}>📄 {t('processImage')}</button>
-          <button className="outlined" disabled={busy} onClick={onPickFolder}>📁 {t('processFolder')}</button>
-          <span className="label">{t('target')}</span>
-          <span className="path">{files.length ? (files.length === 1 ? files[0].name : `${files.length} 枚`) : '—'}</span>
-          <input ref={fileInput} type="file" accept="image/*" hidden
-            onChange={e => e.target.files && setTargets(Array.from(e.target.files))} />
-          <input ref={folderInput} type="file" hidden multiple
-            onChange={e => e.target.files && setTargets(Array.from(e.target.files))} />
-        </div>
-        <hr />
-
-        <div className="row">
-          <button className="outlined" disabled={busy} onClick={onSelectOutput}>{t('selectOutput')}</button>
-          <span className="label">{t('output')}</span>
-          <span className="path">{dirName || t('outputDownload')}</span>
-        </div>
-        <hr />
-
-        {/* 保存形式を1階層目で直接選択 */}
-        <div className="row fmts">
-          <span className="lbl">保存形式：</span>
-          <label className="check"><input type="checkbox" checked={fmt.txt} onChange={e => setFmt(s => ({ ...s, txt: e.target.checked }))} /> テキスト(.txt)</label>
-          <label className="check"><input type="checkbox" checked={fmt.json} onChange={e => setFmt(s => ({ ...s, json: e.target.checked }))} /> JSON(.json)</label>
-          <label className="check"><input type="checkbox" checked={fmt.xml} onChange={e => setFmt(s => ({ ...s, xml: e.target.checked }))} /> XML(.xml)</label>
-          <label className="check"><input type="checkbox" checked={viz} onChange={e => setViz(e.target.checked)} /> {t('saveViz')}</label>
-        </div>
-        <hr />
-
-        <div className="row">
-          {status === 'running'
-            ? <button className="filled stop" onClick={stopOCR}>{t('stopOcr')}</button>
-            : <button className="filled" disabled={status === 'loading'} onClick={runOCR}>{t('ocr')}</button>}
-          <button className={cropMode ? 'outlined on' : 'outlined'} disabled={busy || files.length === 0}
-            onClick={() => setCropMode(v => !v)}
-            title="画像の一部だけを枠で囲んで読み取ります。押してからプレビュー上をドラッグしてください">
-            ✂️ {t('cropOcr')}
-          </button>
-        </div>
-        <hr />
-
-        <div className="row prevhdr">
-          <span className="label">{t('preview')}</span>
-          <button className="outlined sm" disabled={idx <= 0} onClick={() => setIdx(i => Math.max(0, i - 1))}>{t('prev')}</button>
-          <button className="outlined sm" disabled={idx >= files.length - 1} onClick={() => setIdx(i => Math.min(files.length - 1, i + 1))}>{t('next')}</button>
-          {files.length > 1 && <span className="muted">{idx + 1} / {files.length}</span>}
-          {status === 'loading' && <span className="muted">⏳ {t('loadingShort')}</span>}
-          {status === 'running' && <span className="muted">🔎 {progress}</span>}
+          <div className="trow">
+            {status === 'running'
+              ? <button className="filled stop" onClick={stopOCR}>{t('stopOcr')}</button>
+              : <button className="filled" disabled={status === 'loading'} onClick={runOCR}>{t('ocr')}</button>}
+            <button className={cropMode ? 'outlined on' : 'outlined'} disabled={busy || files.length === 0}
+              onClick={() => setCropMode(v => !v)}
+              title="画像の一部だけを枠で囲んで読み取ります。押してからプレビュー上をドラッグしてください">✂️ {t('cropOcr')}</button>
+            <span className="spacer" />
+            <span className="lbl">まず試す：</span>
+            {SAMPLES.map(s => (
+              <button key={s.file} className="sample" disabled={busy} onClick={() => onSample(s.file)} title={`サンプル（${s.label}）でOCRを体験`}>
+                <img src={import.meta.env.BASE_URL + 'samples/' + s.file} alt={s.label} />
+                <span>{s.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {error && <div className="err">⚠️ {error}</div>}
@@ -243,36 +240,47 @@ export default function App() {
             <div className="pv-grid">
               <div className={`imgwrap ${cropMode ? 'crop' : ''}`}
                 onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={() => { dragRef.current = null }}>
-                <img ref={imgRef} src={urls[idx]} alt="preview" draggable={false} />
-                {cur && (
-                  <svg viewBox={`0 0 ${cur.width} ${cur.height}`} className="overlay" preserveAspectRatio="none">
-                    {cur.lines.map((l, i) => <rect key={i} x={l.box.x1} y={l.box.y1} width={l.box.x2 - l.box.x1} height={l.box.y2 - l.box.y1} className="bbox" />)}
-                  </svg>
-                )}
-                {sel && <div className="selbox" style={{ left: sel.x, top: sel.y, width: sel.w, height: sel.h }} />}
+                <div className="imginner">
+                  <img ref={imgRef} src={urls[idx]} alt="preview" draggable={false} />
+                  {cur && (
+                    <svg viewBox={`0 0 ${cur.width} ${cur.height}`} className="overlay" preserveAspectRatio="none">
+                      {cur.lines.map((l, i) => <rect key={i} x={l.box.x1} y={l.box.y1} width={l.box.x2 - l.box.x1} height={l.box.y2 - l.box.y1} className="bbox" />)}
+                    </svg>
+                  )}
+                  {sel && <div className="selbox" style={{ left: sel.x, top: sel.y, width: sel.w, height: sel.h }} />}
+                </div>
                 {cropMode && <div className="crophint">{t('cropHint')}</div>}
               </div>
               <div className="txtwrap">
-                {cur ? <>
-                  <div className="txthdr"><span className="muted">{cur.lines.length} 行 / {Math.round(cur.ms)}ms / {cur.vertical ? '縦書き' : '横書き'}</span>
-                    <button className="link" onClick={() => navigator.clipboard.writeText(cur.text)}>{t('copy')}</button></div>
-                  <textarea readOnly value={cur.text} spellCheck={false} />
-                </> : <div className="ph">{status === 'running' ? progress : 'OCR結果がここに表示されます'}</div>}
+                <div className="txthdr">
+                  <span className="muted">
+                    {cur ? `${cur.lines.length} 行 / ${Math.round(cur.ms)}ms / ${cur.vertical ? '縦書き' : '横書き'}` : (status === 'running' ? progress : '結果待ち')}
+                  </span>
+                  <span className="navs">
+                    {files.length > 1 && <>
+                      <button className="link" disabled={idx <= 0} onClick={() => setIdx(i => Math.max(0, i - 1))}>‹{t('prev')}</button>
+                      <span className="muted">{idx + 1}/{files.length}</span>
+                      <button className="link" disabled={idx >= files.length - 1} onClick={() => setIdx(i => Math.min(files.length - 1, i + 1))}>{t('next')}›</button>
+                    </>}
+                    {cur && <button className="link" onClick={() => navigator.clipboard.writeText(cur.text)}>{t('copy')}</button>}
+                  </span>
+                </div>
+                {cur
+                  ? <textarea readOnly value={cur.text} spellCheck={false} />
+                  : <div className="ph">{status === 'running' ? progress : 'OCR結果がここに表示されます'}</div>}
               </div>
             </div>
           ) : (
-            <div className="empty" onClick={onPickImage}>
-              {status === 'loading' ? <>⏳ {t('loading')}<br /><small className="loadnote">{t('loadingNote')}</small></> : <>📄 {t('processImage')}<br /><small>jpg・png・tiff など</small></>}
+            <div className="empty" onClick={() => !busy && onPickImage()}>
+              {status === 'loading'
+                ? <><div className="big">⏳ {t('loading')}</div><small className="loadnote">{t('loadingNote')}</small></>
+                : <><div className="big">📄 画像をドロップ / クリックして選択</div><small>または上の「まず試す」でサンプルを体験できます</small></>}
             </div>
           )}
         </div>
 
         <div className="foot">
-          <div>{t('privacy')}</div>
-          <div className="muted">{t('engine')}</div>
-          <div className="muted">
-            ソースコード: <a href="https://github.com/thebigeaterr/kotenocr-web" target="_blank" rel="noreferrer">github.com/thebigeaterr/kotenocr-web</a>
-          </div>
+          {t('privacy')}　／　{t('engine')}　／　ソースコード: <a href="https://github.com/thebigeaterr/kotenocr-web" target="_blank" rel="noreferrer">github.com/thebigeaterr/kotenocr-web</a>
         </div>
       </main>
 
@@ -280,51 +288,17 @@ export default function App() {
         <div className="modal" onClick={() => setShowAbout(false)}>
           <div className="dlg about" onClick={e => e.stopPropagation()}>
             <h3>🔒 仕組みと安全性 — 画像はPCの外に出ません</h3>
-
-            <p><strong>ふつうのOCR</strong>は、画像を「どこかのサーバーに送って」文字にします。
-            このツールは、画像を「<strong>あなたのPCの中だけ</strong>」で文字にします。だから画像は一歩も外に出ません。</p>
-
-            <h4>たとえ話：出前 🆚 自炊</h4>
-            <p>
-              <strong>ふつうのOCRサービス（出前）</strong>：食材（＝あなたの画像）をお店に送って調理してもらう → 食材が外に出る。<br />
-              <strong>このツール（自炊）</strong>：レシピと調理道具（＝画像処理プログラム）を家に届けてもらい、自分の台所（＝ブラウザ）で調理 → 食材は家から一歩も出ない。
-            </p>
-
-            <h4>データの「向き」</h4>
-            <p>
-              ・<strong>来る</strong>もの：画像処理プログラム（最初の1回だけ）<br />
-              ・<strong>出ていく</strong>もの：画像 → <strong>ゼロ</strong>
-            </p>
-
-            <h4>自分で確かめられます（一番の証拠）</h4>
-            <p className="tip">
-              ① ページを一度開く → ② Wi-Fi（ネット）を切る → ③ その状態でOCRしてみる。<br />
-              <strong>ネットを切っても、ふつうに動きます。</strong>
-              もし画像を外部に送る仕組みなら、ネットが切れたら動かないはず。
-              「ネットなしで動く＝どこにも送っていない」動かぬ証拠です。
-            </p>
-
-            <h4>画像はそのあとどうなる？</h4>
-            <p>
-              ブラウザの中の一時メモリで処理して<strong>終わったら消えます</strong>。どこのサーバーにも保存されません。
-              結果（テキスト等）は、<strong>あなたが保存したものがあなたのPCの中に置かれるだけ</strong>です。
-            </p>
-
-            <h4>画像処理プログラムの保存先</h4>
-            <p>
-              最初に読み込む画像処理プログラム（約180MB）は、<strong>あなたのPCの中（ブラウザのこのサイト専用の保存領域）</strong>に保存されます。
-              次回からは再ダウンロード不要で、オフラインでも使えます。不要になればブラウザの「サイトデータを削除」で消せます。
-            </p>
-
-            <h4>だから役所でも安心</h4>
-            <p>
-              個人情報や行政文書を<strong>外部に送らない</strong>＝いわゆる「情報の持ち出し」に当たりません。
-              クラウドに上げないので、送信中・預け先での漏えいリスクがそもそも発生しません。
-              ソースコードも公開されており検証できます。
-            </p>
-
-            <p className="muted">※「ページを開く」「初回に画像処理プログラムを取り込む」ときだけ、ふつうのWeb閲覧と同じ通信が起きます（＝道具が届く通信）。これは画像とは無関係です。</p>
-
+            <p>ふつうのOCRは画像を<strong>サーバーに送って</strong>処理しますが、このツールは画像を<strong>あなたのパソコンの中だけ</strong>で処理します。画像は一歩も外に出ません。</p>
+            <p className="tip">💡「ブラウザ＝インターネット」と思われがちですが、ブラウザは<strong>あなたのパソコンで動くアプリ</strong>です。文字の読み取りは、ネットの向こうではなく<strong>あなたのパソコン自身（CPU）</strong>が計算しています。</p>
+            <h4>たとえ話（出前 🆚 自炊）</h4>
+            <p><strong>出前</strong>＝食材（画像）をお店に送る。<strong>自炊</strong>＝道具（プログラム）を家に届けてもらい、自分の台所（あなたのパソコン）で調理。このツールは「自炊」なので、画像は家から出ません。</p>
+            <h4>自分で確かめられます</h4>
+            <p className="tip">ページを開いた後に<strong>ネットを切ってもOCRできます</strong>。外に送る仕組みなら切れた瞬間に止まるはず＝どこにも送っていない証拠です。</p>
+            <h4>画像とプログラムの扱い</h4>
+            <p>画像は処理が<strong>終わると消えます</strong>（保存されません）。最初に読み込むプログラム（約180MB）は<strong>あなたのパソコンの中</strong>に保存され、次回は再ダウンロード不要・オフラインでも使えます（ブラウザの「サイトデータを削除」で消去可）。結果ファイルは、あなたが保存した場所に置かれるだけです。</p>
+            <h4>企業や役所でも安心</h4>
+            <p>個人情報や<strong>機密文書を外部に送らない</strong>＝「情報の持ち出し」に当たりません。クラウドに上げないので漏えいリスクが発生せず、ソースコードも公開されており検証できます。</p>
+            <p className="muted">※「ページを開く」「初回にプログラムを取り込む」ときだけ、ふつうのWeb閲覧と同じ通信が起きます（道具が届く通信。画像とは無関係です）。</p>
             <div className="dlg-actions"><button className="filled" onClick={() => setShowAbout(false)}>{t('close')}</button></div>
           </div>
         </div>
