@@ -9,7 +9,7 @@ export const T = {
     ja: '処理対象と出力先を選択して「OCR」ボタンを押してください',
     en: 'Please select target images and output folder, then press OCR',
   },
-  captureMode: { ja: 'キャプチャモード', en: 'ScreenCapture Mode' },
+  captureMode: { ja: '画面からOCR', en: 'OCR from Screen' },
   processImage: { ja: '画像ファイルを処理する', en: 'Process an Image' },
   processFolder: { ja: 'フォルダ内の画像を処理する', en: 'Process Images in a Folder' },
   selectOutput: { ja: '出力先を選択する', en: 'Select Output Directory' },
@@ -17,7 +17,7 @@ export const T = {
   output: { ja: '出力先：', en: 'Output Path:' },
   outputDownload: { ja: '（ブラウザのダウンロード）', en: '(Browser downloads)' },
   ocr: { ja: 'OCR', en: 'OCR' },
-  cropOcr: { ja: 'Crop&OCR', en: 'Crop&OCR' },
+  cropOcr: { ja: '範囲を選んでOCR', en: 'Select area & OCR' },
   stopOcr: { ja: 'OCRを中断', en: 'Stop OCR' },
   cancelRequested: {
     ja: '中断を要求しました。現在の処理が終わり次第停止します……',
@@ -44,8 +44,8 @@ export const T = {
     en: 'Everything runs in your browser (images never leave your PC)',
   },
   engine: {
-    ja: 'OCRエンジン: 国立国会図書館 NDLkotenOCR-Lite (CC BY 4.0) をブラウザ向けに移植',
-    en: 'OCR engine: NDLkotenOCR-Lite by the National Diet Library (CC BY 4.0), ported to the browser',
+    ja: '国立国会図書館 NDLkotenOCR-Lite (CC BY 4.0) をベースに、ブラウザ向けに再構築しています',
+    en: 'Rebuilt for the browser, based on NDLkotenOCR-Lite by the National Diet Library (CC BY 4.0)',
   },
 } as const
 

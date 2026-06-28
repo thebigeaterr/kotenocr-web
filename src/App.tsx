@@ -5,6 +5,7 @@ import { T, tr, type Lang } from './i18n'
 import './App.css'
 
 type Status = 'loading' | 'ready' | 'running'
+const lang: Lang = 'ja'
 
 export default function App() {
   const workerRef = useRef<Worker | null>(null)
@@ -12,7 +13,6 @@ export default function App() {
   const rejectRef = useRef<((e: string) => void) | null>(null)
   const cancelRef = useRef(false)
 
-  const [lang, setLang] = useState<Lang>('ja')
   const [status, setStatus] = useState<Status>('loading')
   const [progress, setProgress] = useState('')
   const [error, setError] = useState('')
@@ -26,7 +26,7 @@ export default function App() {
   const [dirName, setDirName] = useState('')
   const [viz, setViz] = useState(true)
   const [fmt, setFmt] = useState<Omit<OutputSettings, 'viz'>>({ txt: true, json: true, xml: true })
-  const [showSettings, setShowSettings] = useState(false)
+  const [showAbout, setShowAbout] = useState(false)
 
   const [cropMode, setCropMode] = useState(false)
   const [cropResult, setCropResult] = useState<{ url: string; res: OcrResult } | null>(null)
@@ -44,7 +44,7 @@ export default function App() {
     w.onmessage = (e) => {
       const m = e.data
       if (m.type === 'progress') setProgress(m.message ?? '')
-      else if (m.type === 'ready') { setStatus('ready'); setProgress(tr('ready', 'ja')) }
+      else if (m.type === 'ready') { setStatus('ready'); setProgress(t('ready')) }
       else if (m.type === 'result') { resolveRef.current?.(m.result as OcrResult); resolveRef.current = null }
       else if (m.type === 'error') { rejectRef.current?.(m.message); rejectRef.current = null }
     }
@@ -100,11 +100,11 @@ export default function App() {
     setStatus('ready')
     setProgress(cancelRef.current ? t('cancelRequested') : t('done'))
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [files, urls, results, dir, fmt, viz, lang])
+  }, [files, urls, results, dir, fmt, viz])
 
   const stopOCR = () => { cancelRef.current = true; setProgress(t('cancelRequested')) }
 
-  // ---- Crop&OCR ----
+  // ---- 範囲を選んでOCR ----
   const onMouseDown = (e: React.MouseEvent) => {
     if (!cropMode || !imgRef.current) return
     const r = imgRef.current.getBoundingClientRect()
@@ -164,16 +164,25 @@ export default function App() {
           <span className="name">{t('brand')}</span>
           <span className="tagline">{t('tagline')}</span>
         </div>
-        <div className="tabs">
-          <button className={lang === 'ja' ? 'tab on' : 'tab'} onClick={() => setLang('ja')}>日本語</button>
-          <button className={lang === 'en' ? 'tab on' : 'tab'} onClick={() => setLang('en')}>English</button>
-        </div>
       </header>
 
       <main className="body">
+        {/* 出自と安全性の案内 */}
+        <div className="banner">
+          <div className="btxt">
+            これは、<strong>国立国会図書館</strong>のOCR「<strong>NDLkotenOCR-Lite</strong>」(CC BY 4.0) を<strong>ベースに</strong>、
+            インストール不要で<strong>ブラウザだけで動く</strong>ように再構築したものです。
+            画像は<strong>あなたのPCの中だけ</strong>で処理され、外部には送信されません。
+          </div>
+          <button className="help" onClick={() => setShowAbout(true)}>🔒 仕組みと安全性</button>
+        </div>
+
         <div className="row top">
           <span className="explain">{t('explain')}</span>
-          <button className="chip" disabled={busy} onClick={onCapture}>{t('captureMode')}</button>
+          <button className="chip" disabled={busy} onClick={onCapture}
+            title="いま画面に表示しているもの（PDFビューアやWebページなど）を撮影して、その文字を読み取ります">
+            🖥 {t('captureMode')}
+          </button>
         </div>
         <hr />
 
@@ -196,14 +205,25 @@ export default function App() {
         </div>
         <hr />
 
+        {/* 保存形式を1階層目で直接選択 */}
+        <div className="row fmts">
+          <span className="lbl">保存形式：</span>
+          <label className="check"><input type="checkbox" checked={fmt.txt} onChange={e => setFmt(s => ({ ...s, txt: e.target.checked }))} /> テキスト(.txt)</label>
+          <label className="check"><input type="checkbox" checked={fmt.json} onChange={e => setFmt(s => ({ ...s, json: e.target.checked }))} /> JSON(.json)</label>
+          <label className="check"><input type="checkbox" checked={fmt.xml} onChange={e => setFmt(s => ({ ...s, xml: e.target.checked }))} /> XML(.xml)</label>
+          <label className="check"><input type="checkbox" checked={viz} onChange={e => setViz(e.target.checked)} /> {t('saveViz')}</label>
+        </div>
+        <hr />
+
         <div className="row">
           {status === 'running'
             ? <button className="filled stop" onClick={stopOCR}>{t('stopOcr')}</button>
             : <button className="filled" disabled={status === 'loading'} onClick={runOCR}>{t('ocr')}</button>}
           <button className={cropMode ? 'outlined on' : 'outlined'} disabled={busy || files.length === 0}
-            onClick={() => setCropMode(v => !v)}>{t('cropOcr')}</button>
-          <label className="check"><input type="checkbox" checked={viz} onChange={e => setViz(e.target.checked)} /> {t('saveViz')}</label>
-          <button className="link" onClick={() => setShowSettings(true)}>{t('outputFormat')}</button>
+            onClick={() => setCropMode(v => !v)}
+            title="画像の一部だけを枠で囲んで読み取ります。押してからプレビュー上をドラッグしてください">
+            ✂️ {t('cropOcr')}
+          </button>
         </div>
         <hr />
 
@@ -251,20 +271,55 @@ export default function App() {
           <div>{t('privacy')}</div>
           <div className="muted">{t('engine')}</div>
           <div className="muted">
-            ソース: <a href="https://github.com/thebigeaterr/kotenocr-web" target="_blank" rel="noreferrer">github.com/thebigeaterr/kotenocr-web</a>
+            ソースコード: <a href="https://github.com/thebigeaterr/kotenocr-web" target="_blank" rel="noreferrer">github.com/thebigeaterr/kotenocr-web</a>
           </div>
         </div>
       </main>
 
-      {showSettings && (
-        <div className="modal" onClick={() => setShowSettings(false)}>
-          <div className="dlg" onClick={e => e.stopPropagation()}>
-            <h3>{t('settingTitle')}</h3>
-            <p className="muted">{t('settingExplain')}</p>
-            <label className="check"><input type="checkbox" checked={fmt.txt} onChange={e => setFmt(s => ({ ...s, txt: e.target.checked }))} /> テキスト (.txt)</label>
-            <label className="check"><input type="checkbox" checked={fmt.json} onChange={e => setFmt(s => ({ ...s, json: e.target.checked }))} /> JSON (.json)</label>
-            <label className="check"><input type="checkbox" checked={fmt.xml} onChange={e => setFmt(s => ({ ...s, xml: e.target.checked }))} /> XML (.xml)</label>
-            <div className="dlg-actions"><button className="filled" onClick={() => setShowSettings(false)}>{t('close')}</button></div>
+      {showAbout && (
+        <div className="modal" onClick={() => setShowAbout(false)}>
+          <div className="dlg about" onClick={e => e.stopPropagation()}>
+            <h3>🔒 仕組みと安全性 — 画像はPCの外に出ません</h3>
+
+            <p><strong>ふつうのOCR</strong>は、画像を「どこかのサーバーに送って」文字にします。
+            このツールは、画像を「<strong>あなたのPCの中だけ</strong>」で文字にします。だから画像は一歩も外に出ません。</p>
+
+            <h4>たとえ話：出前 🆚 自炊</h4>
+            <p>
+              <strong>ふつうのOCRサービス（出前）</strong>：食材（＝あなたの画像）をお店に送って調理してもらう → 食材が外に出る。<br />
+              <strong>このツール（自炊）</strong>：レシピと調理道具（＝プログラムとAI）を家に届けてもらい、自分の台所（＝ブラウザ）で調理 → 食材は家から一歩も出ない。
+            </p>
+
+            <h4>データの「向き」</h4>
+            <p>
+              ・<strong>来る</strong>もの：プログラムとAIモデル（最初の1回だけ）<br />
+              ・<strong>出ていく</strong>もの：画像 → <strong>ゼロ</strong>
+            </p>
+
+            <h4>自分で確かめられます（一番の証拠）</h4>
+            <p className="tip">
+              ① ページを一度開く → ② Wi-Fi（ネット）を切る → ③ その状態でOCRしてみる。<br />
+              <strong>ネットを切っても、ふつうに動きます。</strong>
+              もし画像を外部に送る仕組みなら、ネットが切れたら動かないはず。
+              「ネットなしで動く＝どこにも送っていない」動かぬ証拠です。
+            </p>
+
+            <h4>画像はそのあとどうなる？</h4>
+            <p>
+              ブラウザの中の一時メモリで処理して<strong>終わったら消えます</strong>。どこのサーバーにも保存されません。
+              結果（テキスト等）は、<strong>あなたが保存したものがあなたのPCの中に置かれるだけ</strong>です。
+            </p>
+
+            <h4>だから役所でも安心</h4>
+            <p>
+              個人情報や行政文書を<strong>外部に送らない</strong>＝いわゆる「情報の持ち出し」に当たりません。
+              クラウドに上げないので、送信中・預け先での漏えいリスクがそもそも発生しません。
+              ソースコードも公開されており検証できます。
+            </p>
+
+            <p className="muted">※「ページを開く」「初回にAIモデルを取り込む」ときだけ、ふつうのWeb閲覧と同じ通信が起きます（＝道具が届く通信）。これは画像とは無関係です。</p>
+
+            <div className="dlg-actions"><button className="filled" onClick={() => setShowAbout(false)}>{t('close')}</button></div>
           </div>
         </div>
       )}
