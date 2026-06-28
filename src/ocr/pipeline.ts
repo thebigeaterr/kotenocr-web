@@ -3,6 +3,7 @@
 // DEIM(レイアウト検出) -> 行抽出 -> 読み順 -> PARSeq カスケード(30/50/100字) 文字認識
 
 import type * as Ort from 'onnxruntime-web'
+import { bilinearResize, bicubicResize, rotate90ccw, type Img } from './resize'
 
 // ndl.yaml のクラス定義 (index -> name)
 export const CLASS_NAMES = [
@@ -79,14 +80,14 @@ export class Pipeline {
   private async detect(bmp: ImageBitmap): Promise<LineBox[]> {
     const W = bmp.width, H = bmp.height
     const maxWH = Math.max(W, H)
-    const s = DEIM_INPUT / maxWH
 
-    const c = newCanvas(DEIM_INPUT, DEIM_INPUT)
-    const ctx = c.getContext('2d')!
-    ctx.imageSmoothingEnabled = true; (ctx as any).imageSmoothingQuality = 'high'
-    ctx.fillStyle = 'black'; ctx.fillRect(0, 0, DEIM_INPUT, DEIM_INPUT)
-    ctx.drawImage(bmp, 0, 0, W, H, 0, 0, W * s, H * s)
-    const id = ctx.getImageData(0, 0, DEIM_INPUT, DEIM_INPUT).data
+    // 本家 deim.py: 正方(黒)パディング後 PIL bicubic で 800x800 に縮小
+    const sq = newCanvas(maxWH, maxWH)
+    const sctx = sq.getContext('2d')!
+    sctx.fillStyle = 'black'; sctx.fillRect(0, 0, maxWH, maxWH)
+    sctx.drawImage(bmp, 0, 0)
+    const sqData = sctx.getImageData(0, 0, maxWH, maxWH)
+    const id = bicubicResize({ data: sqData.data, width: maxWH, height: maxWH }, DEIM_INPUT, DEIM_INPUT).data
 
     const n = DEIM_INPUT * DEIM_INPUT
     const input = new Float32Array(3 * n)
@@ -162,12 +163,13 @@ export class Pipeline {
     const W = this.recWidth.get(key)!
     const w = box.x2 - box.x1, h = box.y2 - box.y1
     if (w < 1 || h < 1) return ''
-    const c = newCanvas(W, PARSEQ_H)
-    const ctx = c.getContext('2d')!
-    ctx.imageSmoothingEnabled = true; (ctx as any).imageSmoothingQuality = 'high'
-    if (h > w) { ctx.translate(0, PARSEQ_H); ctx.rotate(-Math.PI / 2); ctx.drawImage(bmp, box.x1, box.y1, w, h, 0, 0, PARSEQ_H, W) }
-    else ctx.drawImage(bmp, box.x1, box.y1, w, h, 0, 0, W, PARSEQ_H)
-    const id = ctx.getImageData(0, 0, W, PARSEQ_H).data
+    // 本家 parseq.py: ネイティブ解像度でクロップ -> (縦長なら90°CCW回転) -> cv2 bilinear で (W,24)
+    const cc = newCanvas(w, h)
+    const cctx = cc.getContext('2d')!
+    cctx.drawImage(bmp, box.x1, box.y1, w, h, 0, 0, w, h)
+    let crop: Img = { data: cctx.getImageData(0, 0, w, h).data, width: w, height: h }
+    if (h > w) crop = rotate90ccw(crop)
+    const id = bilinearResize(crop, W, PARSEQ_H).data
 
     const n = W * PARSEQ_H
     const input = new Float32Array(3 * n)
