@@ -3,6 +3,8 @@ export type Lang = 'ja' | 'en'
 
 export const T = {
   appTitle: { ja: 'NDLOCR-Lite-GUI', en: 'NDLOCR-Lite-GUI' },
+  brand: { ja: '古典籍OCR', en: 'Koten OCR' },
+  tagline: { ja: 'ブラウザ完結・インストール不要', en: 'Runs in your browser — no install' },
   explain: {
     ja: '処理対象と出力先を選択して「OCR」ボタンを押してください',
     en: 'Please select target images and output folder, then press OCR',

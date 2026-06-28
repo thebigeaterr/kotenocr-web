@@ -1,8 +1,8 @@
 html, body {
   margin: 0;
-  background: #d9dde2;
+  background: #f6f7f9;
   color: #202124;
   font-family: ui-sans-serif, system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
   -webkit-font-smoothing: antialiased;
 }
-#root { min-height: 100vh; padding: 1px 0; }
+#root { min-height: 100vh; }

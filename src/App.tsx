@@ -157,18 +157,20 @@ export default function App() {
   const cur = results[idx] ?? null
 
   return (
-    <div className="win">
-      <div className="titlebar">
-        <span className="dot" /> {t('appTitle')}
-        <span className="winctl">— ▢ ✕</span>
-      </div>
-
-      <div className="body">
+    <div className="page">
+      <header className="appbar">
+        <img className="logo" src={import.meta.env.BASE_URL + 'icon.svg'} alt="" />
+        <div className="brand">
+          <span className="name">{t('brand')}</span>
+          <span className="tagline">{t('tagline')}</span>
+        </div>
         <div className="tabs">
           <button className={lang === 'ja' ? 'tab on' : 'tab'} onClick={() => setLang('ja')}>日本語</button>
           <button className={lang === 'en' ? 'tab on' : 'tab'} onClick={() => setLang('en')}>English</button>
         </div>
+      </header>
 
+      <main className="body">
         <div className="row top">
           <span className="explain">{t('explain')}</span>
           <button className="chip" disabled={busy} onClick={onCapture}>{t('captureMode')}</button>
@@ -248,8 +250,11 @@ export default function App() {
         <div className="foot">
           <div>{t('privacy')}</div>
           <div className="muted">{t('engine')}</div>
+          <div className="muted">
+            ソース: <a href="https://github.com/thebigeaterr/kotenocr-web" target="_blank" rel="noreferrer">github.com/thebigeaterr/kotenocr-web</a>
+          </div>
         </div>
-      </div>
+      </main>
 
       {showSettings && (
         <div className="modal" onClick={() => setShowSettings(false)}>

@@ -7,28 +7,22 @@
 }
 * { box-sizing: border-box; }
 
-.win {
-  max-width: 1000px;
-  margin: 24px auto;
-  background: #fff;
-  border: 1px solid #d9dde2;
-  border-radius: 12px;
-  box-shadow: 0 12px 40px rgba(0,0,0,.18);
-  overflow: hidden;
-  color: var(--text);
+.page { min-height: 100vh; color: var(--text); }
+
+.appbar {
+  display: flex; align-items: center; gap: 12px;
+  background: #fff; border-bottom: 1px solid var(--line);
+  padding: 12px 24px; position: sticky; top: 0; z-index: 5;
 }
+.appbar .logo { width: 32px; height: 32px; border-radius: 7px; }
+.appbar .brand { display: flex; flex-direction: column; line-height: 1.25; }
+.appbar .brand .name { font-size: 17px; font-weight: 700; }
+.appbar .brand .tagline { font-size: 11px; color: var(--muted); }
 
-.titlebar {
-  display: flex; align-items: center; gap: 8px;
-  background: #f1f3f4; border-bottom: 1px solid var(--line);
-  padding: 8px 14px; font-size: 13px; color: #3c4043;
-}
-.titlebar .dot { width: 12px; height: 12px; border-radius: 50%; background: #1a73e8; display: inline-block; }
-.titlebar .winctl { margin-left: auto; color: #9aa0a6; letter-spacing: 4px; }
+.body { max-width: 1000px; margin: 0 auto; padding: 18px 24px 48px; }
 
-.body { padding: 16px 20px 22px; }
-
-.tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+.tabs { display: flex; gap: 6px; }
+.appbar .tabs { margin-left: auto; }
 .tab { border: 1px solid var(--line); background: #fff; color: #3c4043; padding: 5px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; }
 .tab.on { background: var(--blue); color: #fff; border-color: var(--blue); }
 
@@ -86,6 +80,7 @@ textarea {
 .empty small { color: #9aa0a6; }
 
 .foot { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 12px; color: #3c4043; line-height: 1.7; }
+.foot a { color: var(--blue); }
 
 .modal { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; z-index: 10; }
 .dlg { background: #fff; border-radius: 12px; padding: 22px; width: 360px; box-shadow: 0 16px 50px rgba(0,0,0,.3); }
