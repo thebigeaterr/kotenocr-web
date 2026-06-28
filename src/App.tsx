@@ -7,8 +7,8 @@ import './App.css'
 type Status = 'loading' | 'ready' | 'running'
 const lang: Lang = 'ja'
 const SAMPLES = [
-  { file: 'sample_yoko.png', label: '横書き（活字）' },
-  { file: 'sample_tate.png', label: '縦書き（活字）' },
+  { file: 'sample_yoko.png', label: '横書き（竹取物語）' },
+  { file: 'sample_tate.png', label: '縦書き（いろは歌）' },
 ]
 
 export default function App() {
@@ -78,6 +78,11 @@ export default function App() {
 
   const onPickImage = () => fileInput.current?.click()
   const onPickFolder = () => folderInput.current?.click()
+  const onDropFiles = (e: React.DragEvent) => {
+    e.preventDefault()
+    const f = Array.from(e.dataTransfer.files || [])
+    if (f.length) setTargets(f)
+  }
 
   const onSelectOutput = async () => {
     if (!supportsDirPicker()) { setError('このブラウザは出力先フォルダ選択に未対応です。結果はダウンロードされます。'); return }
@@ -193,7 +198,10 @@ export default function App() {
           <span className="name">{t('brand')}</span>
           <span className="tagline">{t('tagline')}</span>
         </div>
-        <button className="help" onClick={() => setShowAbout(true)}>🔒 仕組みと安全性</button>
+        <div className="abar-right">
+          <a className="ghlink" href="https://github.com/thebigeaterr/kotenocr-web" target="_blank" rel="noreferrer">ソースコード</a>
+          <button className="help" onClick={() => setShowAbout(true)}>🔒 仕組みと安全性</button>
+        </div>
       </header>
 
       <main className="body">
@@ -234,14 +242,6 @@ export default function App() {
             <button className={cropMode ? 'outlined on' : 'outlined'} disabled={busy || files.length === 0}
               onClick={() => setCropMode(v => !v)}
               title="画像の一部だけを枠で囲んで読み取ります。押してからプレビュー上をドラッグしてください">✂️ {t('cropOcr')}</button>
-            <span className="spacer" />
-            <span className="lbl">まず試す：</span>
-            {SAMPLES.map(s => (
-              <button key={s.file} className="sample" disabled={busy} onClick={() => onSample(s.file)} title={`サンプル（${s.label}）でOCRを体験`}>
-                <img src={import.meta.env.BASE_URL + 'samples/' + s.file} alt={s.label} />
-                <span>{s.label}</span>
-              </button>
-            ))}
           </div>
         </div>
 
@@ -267,7 +267,7 @@ export default function App() {
               <div className="txtwrap">
                 <div className="txthdr">
                   <span className="muted">
-                    {cur ? `${cur.lines.length} 行 / ${Math.round(cur.ms)}ms / ${cur.vertical ? '縦書き' : '横書き'}` : (status === 'running' ? progress : '結果待ち')}
+                    {cur ? `✓ ${cur.lines.length}行を認識 / ${Math.round(cur.ms)}ms / ${cur.vertical ? '縦書き' : '横書き'}` : (status === 'running' ? progress : '結果待ち')}
                   </span>
                   <span className="navs">
                     {files.length > 1 && <>
@@ -284,17 +284,24 @@ export default function App() {
               </div>
             </div>
           ) : (
-            <div className="empty" onClick={() => !busy && onPickImage()}>
-              {status === 'loading'
-                ? <><div className="big">⏳ {t('loading')}</div><small className="loadnote">{t('loadingNote')}</small></>
-                : <><div className="big">📄 画像をドロップ / クリックして選択</div><small>または上の「まず試す」でサンプルを体験できます</small></>}
+            <div className="hero" onDragOver={e => e.preventDefault()} onDrop={onDropFiles}>
+              <div className="hero-head">📷 → 📝 画像の文字が、<strong>コピーできるテキスト</strong>になります</div>
+              <div className="hero-sub">{status === 'loading' ? '初回だけ準備中です（ボタンはまもなく押せます）' : 'まずはワンクリックで体験してみてください'}</div>
+              <div className="hero-samples">
+                {SAMPLES.map(s => (
+                  <button key={s.file} className="scard" disabled={busy} onClick={() => onSample(s.file)}>
+                    <img src={import.meta.env.BASE_URL + 'samples/' + s.file} alt={s.label} />
+                    <span className="stitle">{s.label}</span>
+                    <span className="srun">{status === 'loading' ? '準備中…' : '▶ クリックで実行'}</span>
+                  </button>
+                ))}
+              </div>
+              <button className="hero-pick" disabled={busy} onClick={onPickImage}>または自分の画像を選ぶ / ここにドロップ</button>
+              {status === 'loading' && <div className="hero-load">📦 {t('loadingNote')}</div>}
             </div>
           )}
         </div>
 
-        <div className="foot">
-          {t('privacy')}　／　{t('engine')}　／　ソースコード: <a href="https://github.com/thebigeaterr/kotenocr-web" target="_blank" rel="noreferrer">github.com/thebigeaterr/kotenocr-web</a>
-        </div>
       </main>
 
       {showAbout && (
