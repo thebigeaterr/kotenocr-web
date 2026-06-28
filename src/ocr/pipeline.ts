@@ -67,10 +67,10 @@ export class Pipeline {
     if (this.charset.length !== 7141) throw new Error(`charset length ${this.charset.length} != 7141`)
 
     const opts: Ort.InferenceSession.SessionOptions = { executionProviders: ['wasm'], graphOptimizationLevel: 'all' }
-    onProgress({ stage: 'model', message: 'レイアウトモデル読込中 (DEIM)' })
+    onProgress({ stage: 'model', message: 'レイアウト用プログラムを読み込み中' })
     this.deim = await this.ort.InferenceSession.create(this.base + 'models/deim.onnx', opts)
     for (const m of REC_MODELS) {
-      onProgress({ stage: 'model', message: `文字認識モデル読込中 (${m.key}字)` })
+      onProgress({ stage: 'model', message: `文字認識用プログラムを読み込み中（${m.key}字）` })
       this.rec.set(m.key, await this.ort.InferenceSession.create(this.base + 'models/' + m.file, opts))
       this.recWidth.set(m.key, m.width)
     }

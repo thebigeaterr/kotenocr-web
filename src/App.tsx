@@ -232,7 +232,7 @@ export default function App() {
           <button className="outlined sm" disabled={idx <= 0} onClick={() => setIdx(i => Math.max(0, i - 1))}>{t('prev')}</button>
           <button className="outlined sm" disabled={idx >= files.length - 1} onClick={() => setIdx(i => Math.min(files.length - 1, i + 1))}>{t('next')}</button>
           {files.length > 1 && <span className="muted">{idx + 1} / {files.length}</span>}
-          {status === 'loading' && <span className="muted">⏳ {t('loading')}…（{t('loadingNote')}）</span>}
+          {status === 'loading' && <span className="muted">⏳ {t('loadingShort')}</span>}
           {status === 'running' && <span className="muted">🔎 {progress}</span>}
         </div>
 
@@ -262,7 +262,7 @@ export default function App() {
             </div>
           ) : (
             <div className="empty" onClick={onPickImage}>
-              {status === 'loading' ? <>⏳ {t('loading')}…<br /><small>{t('loadingNote')}</small></> : <>📄 {t('processImage')}<br /><small>jpg・png・tiff など</small></>}
+              {status === 'loading' ? <>⏳ {t('loading')}<br /><small className="loadnote">{t('loadingNote')}</small></> : <>📄 {t('processImage')}<br /><small>jpg・png・tiff など</small></>}
             </div>
           )}
         </div>
@@ -287,12 +287,12 @@ export default function App() {
             <h4>たとえ話：出前 🆚 自炊</h4>
             <p>
               <strong>ふつうのOCRサービス（出前）</strong>：食材（＝あなたの画像）をお店に送って調理してもらう → 食材が外に出る。<br />
-              <strong>このツール（自炊）</strong>：レシピと調理道具（＝プログラムとAI）を家に届けてもらい、自分の台所（＝ブラウザ）で調理 → 食材は家から一歩も出ない。
+              <strong>このツール（自炊）</strong>：レシピと調理道具（＝画像処理プログラム）を家に届けてもらい、自分の台所（＝ブラウザ）で調理 → 食材は家から一歩も出ない。
             </p>
 
             <h4>データの「向き」</h4>
             <p>
-              ・<strong>来る</strong>もの：プログラムとAIモデル（最初の1回だけ）<br />
+              ・<strong>来る</strong>もの：画像処理プログラム（最初の1回だけ）<br />
               ・<strong>出ていく</strong>もの：画像 → <strong>ゼロ</strong>
             </p>
 
@@ -310,6 +310,12 @@ export default function App() {
               結果（テキスト等）は、<strong>あなたが保存したものがあなたのPCの中に置かれるだけ</strong>です。
             </p>
 
+            <h4>画像処理プログラムの保存先</h4>
+            <p>
+              最初に読み込む画像処理プログラム（約180MB）は、<strong>あなたのPCの中（ブラウザのこのサイト専用の保存領域）</strong>に保存されます。
+              次回からは再ダウンロード不要で、オフラインでも使えます。不要になればブラウザの「サイトデータを削除」で消せます。
+            </p>
+
             <h4>だから役所でも安心</h4>
             <p>
               個人情報や行政文書を<strong>外部に送らない</strong>＝いわゆる「情報の持ち出し」に当たりません。
@@ -317,7 +323,7 @@ export default function App() {
               ソースコードも公開されており検証できます。
             </p>
 
-            <p className="muted">※「ページを開く」「初回にAIモデルを取り込む」ときだけ、ふつうのWeb閲覧と同じ通信が起きます（＝道具が届く通信）。これは画像とは無関係です。</p>
+            <p className="muted">※「ページを開く」「初回に画像処理プログラムを取り込む」ときだけ、ふつうのWeb閲覧と同じ通信が起きます（＝道具が届く通信）。これは画像とは無関係です。</p>
 
             <div className="dlg-actions"><button className="filled" onClick={() => setShowAbout(false)}>{t('close')}</button></div>
           </div>
