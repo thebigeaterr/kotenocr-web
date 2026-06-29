@@ -24,7 +24,6 @@
       }
     ],
     "security": {
-      "_comment": "WASM(onnxruntime)実行に 'wasm-unsafe-eval' が必須。これを欠くとOCRが起動しない。connect-src 'self' で外部送信をエンジン側で遮断（多層防御）。",
       "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-src 'none'"
     }
   },
