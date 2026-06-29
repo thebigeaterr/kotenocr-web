@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { OcrResult } from './ocr/pipeline'
 import { saveOutputs, pickDirectory, supportsDirPicker, type OutputSettings } from './ocr/save'
+import { spawnWorker, buildInit } from '@spawn'
 import { T, tr, type Lang } from './i18n'
 import './App.css'
 
@@ -43,7 +44,7 @@ export default function App() {
   const t = (k: keyof typeof T) => tr(k, lang)
 
   useEffect(() => {
-    const w = new Worker(new URL('./ocr/worker.ts', import.meta.url), { type: 'module' })
+    const w = spawnWorker()
     workerRef.current = w
     w.onmessage = (e) => {
       const m = e.data
@@ -52,7 +53,8 @@ export default function App() {
       else if (m.type === 'result') { resolveRef.current?.(m.result as OcrResult); resolveRef.current = null }
       else if (m.type === 'error') { rejectRef.current?.(m.message); rejectRef.current = null }
     }
-    w.postMessage({ type: 'init', base: import.meta.env.BASE_URL })
+    // init payload は版により異なる（web/Tauri=base / オフラインHTML=埋め込みバイト列）
+    buildInit().then(({ msg, transfer }) => w.postMessage(msg, transfer)).catch((err) => setError(String(err)))
     return () => w.terminate()
   }, [])
 
@@ -116,8 +118,7 @@ export default function App() {
 
   const onSample = async (name: string) => {
     try {
-      const res = await fetch(import.meta.env.BASE_URL + 'samples/' + name)
-      const blob = await res.blob()
+      const blob = await loadSampleBlob(name)
       const file = new File([blob], name, { type: blob.type || 'image/png' })
       urls.forEach(u => URL.revokeObjectURL(u))
       const url = URL.createObjectURL(blob)
@@ -187,7 +188,11 @@ export default function App() {
   const cur = results[idx] ?? null
   // タッチ専用端末（スマホ等）では、対応していない機能を隠す
   const isTouchOnly = typeof window !== 'undefined' && !!window.matchMedia && matchMedia('(pointer: coarse)').matches && !matchMedia('(pointer: fine)').matches
-  const canCapture = !isTouchOnly && typeof navigator !== 'undefined' && !!navigator.mediaDevices && typeof (navigator.mediaDevices as any).getDisplayMedia === 'function'
+  // 画面キャプチャ・フォルダ選択は file://(オフラインHTML)では隠す。
+  // 注意: Chrome は file:// を secure context 扱いにする(isSecureContext===true)ため、
+  // isSecureContext だけでは判別できない。protocol==='file:' を併用して確実に判定する。
+  const isFileProto = typeof location !== 'undefined' && location.protocol === 'file:'
+  const canCapture = !isTouchOnly && !isFileProto && typeof window !== 'undefined' && window.isSecureContext && typeof navigator !== 'undefined' && !!navigator.mediaDevices && typeof (navigator.mediaDevices as any).getDisplayMedia === 'function'
   const canDir = supportsDirPicker()
 
   return (
@@ -275,7 +280,7 @@ export default function App() {
                       <span className="muted">{idx + 1}/{files.length}</span>
                       <button className="link" disabled={idx >= files.length - 1} onClick={() => setIdx(i => Math.min(files.length - 1, i + 1))}>{t('next')}›</button>
                     </>}
-                    {cur && <button className="link" onClick={() => navigator.clipboard.writeText(cur.text)}>{t('copy')}</button>}
+                    {cur && <button className="link" onClick={() => copyText(cur.text)}>{t('copy')}</button>}
                   </span>
                 </div>
                 {cur
@@ -334,7 +339,7 @@ export default function App() {
             </div>
             <div className="dlg-actions">
               <span className="muted">{Math.round(cropResult.res.ms)}ms</span>
-              <button className="link" onClick={() => navigator.clipboard.writeText(cropResult.res.text)}>{t('copy')}</button>
+              <button className="link" onClick={() => copyText(cropResult.res.text)}>{t('copy')}</button>
               <button className="filled" onClick={() => setCropResult(null)}>{t('close')}</button>
             </div>
           </div>
@@ -346,4 +351,28 @@ export default function App() {
 
 function loadImg(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => { const im = new Image(); im.onload = () => resolve(im); im.onerror = reject; im.src = url })
+}
+
+// サンプル画像をBlob化。オフラインHTML版は埋め込み data URL（file:// では相対fetch不可、
+// <img>→canvas 転写は別オリジン扱いで canvas が汚染され toBlob 不可のため）。web/Tauri は同一オリジンfetch。
+async function loadSampleBlob(name: string): Promise<Blob> {
+  const embedded = (globalThis as unknown as { __OCR_SAMPLES__?: Record<string, string> }).__OCR_SAMPLES__?.[name]
+  const url = embedded ?? import.meta.env.BASE_URL + 'samples/' + name
+  return await (await fetch(url)).blob()
+}
+
+// コピー: secure context では Clipboard API、file://(非secure)では execCommand にフォールバック
+function copyText(text: string) {
+  if (typeof navigator !== 'undefined' && navigator.clipboard && typeof window !== 'undefined' && window.isSecureContext) {
+    navigator.clipboard.writeText(text).catch(() => fallbackCopy(text))
+    return
+  }
+  fallbackCopy(text)
+}
+function fallbackCopy(text: string) {
+  const ta = document.createElement('textarea')
+  ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'
+  document.body.appendChild(ta); ta.focus(); ta.select()
+  try { document.execCommand('copy') } catch { /* noop */ }
+  document.body.removeChild(ta)
 }

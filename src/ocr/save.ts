@@ -7,7 +7,11 @@ export interface OutputSettings { txt: boolean; json: boolean; xml: boolean; viz
 type DirHandle = any // FileSystemDirectoryHandle (型は環境依存のため any)
 
 export function supportsDirPicker(): boolean {
-  return typeof (window as any).showDirectoryPicker === 'function'
+  // File System Access API は secure context 必須。file://(オフラインHTML)ではダウンロードにフォールバック。
+  // Chrome は file:// を secure context 扱いにするので protocol==='file:' を併用して確実に除外する
+  // (file:// では showDirectoryPicker が opaque origin で例外になり、無言の死にボタンになるため)。
+  const isFileProto = typeof location !== 'undefined' && location.protocol === 'file:'
+  return typeof window !== 'undefined' && window.isSecureContext && !isFileProto && typeof (window as any).showDirectoryPicker === 'function'
 }
 
 export async function pickDirectory(): Promise<DirHandle | null> {

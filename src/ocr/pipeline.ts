@@ -47,33 +47,53 @@ export type Progress = (p: { stage: string; done?: number; total?: number; messa
 
 function newCanvas(w: number, h: number): OffscreenCanvas { return new OffscreenCanvas(w, h) }
 
+// アセット供給元: URL(fetch) か、事前読込のバイト列(オフラインHTML版=file://でfetch不可のため)
+export interface AssetBytes {
+  charset: ArrayBuffer
+  models: Record<string, ArrayBuffer> // key=ファイル名 例 'deim.onnx'
+}
+export type AssetSource = { base: string } | { bytes: AssetBytes }
+
 export class Pipeline {
   private ort: typeof Ort
-  private base: string
+  private src: AssetSource
   private deim!: Ort.InferenceSession
   private rec = new Map<number, Ort.InferenceSession>()
   private recWidth = new Map<number, number>()
   private charset: string[] = []
   private cascade = true
 
-  constructor(ort: typeof Ort, base: string) { this.ort = ort; this.base = base }
+  constructor(ort: typeof Ort, src: AssetSource) { this.ort = ort; this.src = src }
 
   setCascade(on: boolean) { this.cascade = on }
 
   async load(onProgress: Progress) {
+    const src = this.src
     onProgress({ stage: 'charset', message: '文字セット読込中' })
-    const csJson = await (await fetch(this.base + 'models/charset.json')).json()
+    const csText = 'bytes' in src
+      ? new TextDecoder().decode(new Uint8Array(src.bytes.charset))
+      : await (await fetch(src.base + 'models/charset.json')).text()
+    const csJson = JSON.parse(csText)
     this.charset = Array.from(csJson.charset as string)
     if (this.charset.length !== 7141) throw new Error(`charset length ${this.charset.length} != 7141`)
 
     const opts: Ort.InferenceSession.SessionOptions = { executionProviders: ['wasm'], graphOptimizationLevel: 'all' }
+    // bytesモード=バイト列から生成 / URLモード=パスから生成
+    const createSession = (file: string) =>
+      'bytes' in src
+        ? this.ort.InferenceSession.create(new Uint8Array(src.bytes.models[file]), opts)
+        : this.ort.InferenceSession.create(src.base + 'models/' + file, opts)
+
     onProgress({ stage: 'model', message: 'レイアウト用プログラムを読み込み中' })
-    this.deim = await this.ort.InferenceSession.create(this.base + 'models/deim.onnx', opts)
+    this.deim = await createSession('deim.onnx')
     for (const m of REC_MODELS) {
       onProgress({ stage: 'model', message: `文字認識用プログラムを読み込み中（${m.key}字）` })
-      this.rec.set(m.key, await this.ort.InferenceSession.create(this.base + 'models/' + m.file, opts))
+      this.rec.set(m.key, await createSession(m.file))
       this.recWidth.set(m.key, m.width)
     }
+    // bytesモード: InferenceSession 生成後は元バイト列(モデル計約157MB+charset)は不要。
+    // ort は wasm ヒープ側に重みを保持するため、JS側の生バイトを抱え続けると二重保持になる。解放してGC対象に。
+    if ('bytes' in this.src) this.src = { bytes: { charset: new ArrayBuffer(0), models: {} } }
   }
 
   // ---------- DEIM レイアウト検出 ----------

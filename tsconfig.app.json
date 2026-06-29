@@ -6,6 +6,7 @@
     "module": "esnext",
     "types": ["vite/client"],
     "skipLibCheck": true,
+    "paths": { "@spawn": ["./src/ocr/spawn.ts"] },
 
     /* Bundler mode */
     "moduleResolution": "bundler",

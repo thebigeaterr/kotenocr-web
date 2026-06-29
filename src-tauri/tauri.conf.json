@@ -1,0 +1,58 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "KotenOCR",
+  "version": "0.1.0",
+  "identifier": "io.github.thebigeaterr.kotenocr",
+  "build": {
+    "frontendDist": "../dist-app",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "npm run dev:app",
+    "beforeBuildCommand": "npm run build:app"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "セキュアOCR — ブラウザ完結のOCR（オフライン）",
+        "width": 1200,
+        "height": 820,
+        "minWidth": 720,
+        "minHeight": 560,
+        "resizable": true,
+        "center": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "_comment": "WASM(onnxruntime)実行に 'wasm-unsafe-eval' が必須。これを欠くとOCRが起動しない。connect-src 'self' で外部送信をエンジン側で遮断（多層防御）。",
+      "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-src 'none'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "copyright": "Based on NDLkotenOCR-Lite (National Diet Library, CC BY 4.0)",
+    "category": "Productivity",
+    "shortDescription": "オフライン日本語OCR（セキュアOCR）",
+    "longDescription": "国立国会図書館 NDLkotenOCR-Lite (CC BY 4.0) をベースに再構築したオフライン完結の日本語OCR。画像はPCの外に出ません。インターネット非接続(エアギャップ/LGWAN系)環境でも単体で動作します。",
+    "windows": {
+      "webviewInstallMode": {
+        "type": "offlineInstaller"
+      },
+      "nsis": {
+        "languages": ["Japanese", "English"],
+        "displayLanguageSelector": false
+      },
+      "wix": {
+        "language": "ja-JP"
+      }
+    }
+  }
+}

@@ -1,11 +1,15 @@
 {
   "name": "kotenocr-web",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:app": "tsc -b && cross-env TAURI=1 vite build",
+    "dev:app": "cross-env TAURI=1 vite",
+    "build:html": "tsc -b && cross-env OFFLINE_HTML=1 vite build && node scripts/pack-offline.mjs",
+    "tauri": "tauri",
     "lint": "oxlint",
     "preview": "vite preview"
   },
@@ -15,14 +19,17 @@
     "react-dom": "^19.2.7"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.11.4",
     "@types/node": "^24.13.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
+    "cross-env": "^10.1.0",
     "js-yaml": "^5.2.0",
     "oxlint": "^1.69.0",
     "typescript": "~6.0.2",
     "vite": "^8.1.0",
-    "vite-plugin-pwa": "^1.3.0"
+    "vite-plugin-pwa": "^1.3.0",
+    "vite-plugin-singlefile": "^2.3.3"
   }
 }

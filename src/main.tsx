@@ -8,3 +8,6 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 )
+
+// オフラインHTML版の起動中ローディング(#boot, pack-offline.mjs が注入)をマウント後に除去
+document.getElementById('boot')?.remove()
