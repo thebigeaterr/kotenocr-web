@@ -13,7 +13,9 @@ self.onmessage = async (e: MessageEvent) => {
       // wasmはViteがバンドルした同一オリジンのアセットから自動ロード。
       // COOP/COEP無しのGitHub Pagesでも動くよう単一スレッド固定。
       ort.env.wasm.numThreads = 1
-      pipe = new Pipeline(ort, msg.base)
+      // オフラインHTML版(file://): wasmはfetch不可なのでバイト列で直接供給する。
+      if (msg.wasmBinary) ort.env.wasm.wasmBinary = msg.wasmBinary
+      pipe = new Pipeline(ort, msg.bytes ? { bytes: msg.bytes } : { base: msg.base })
       await pipe.load((p) => post({ type: 'progress', ...p }))
       post({ type: 'ready' })
     } else if (msg.type === 'run') {

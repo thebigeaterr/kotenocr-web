@@ -9,8 +9,17 @@ lerna-debug.log*
 
 node_modules
 dist
+dist-html
+dist-app
 dist-ssr
 *.local
+
+# Tauri (Rust ビルド成果物)
+src-tauri/target/
+src-tauri/gen/schemas/
+
+# 作業メモ（リポジトリには含めない）
+tasks/
 
 # Editor directories and files
 .vscode/*
