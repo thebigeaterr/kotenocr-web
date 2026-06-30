@@ -71,13 +71,10 @@ jobs:
       - name: Verify NSIS installer exists
         shell: pwsh
         run: if (-not (Get-ChildItem src-tauri/target/release/bundle/nsis/*.exe)) { throw 'NSIS .exe が見つかりません' }
-      - name: Verify MSI installer exists
-        shell: pwsh
-        run: if (-not (Get-ChildItem src-tauri/target/release/bundle/msi/*.msi)) { throw 'MSI が見つかりません' }
       - name: Generate SHA256SUMS
         shell: pwsh
         run: |
-          $files = Get-ChildItem -Recurse -Include *.exe,*.msi src-tauri/target/release/bundle
+          $files = Get-ChildItem -Recurse -Include *.exe src-tauri/target/release/bundle
           $files | Get-FileHash -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower())  $(Split-Path $_.Path -Leaf)" } | Out-File -Encoding ascii src-tauri/target/release/bundle/SHA256SUMS.txt
           Get-Content src-tauri/target/release/bundle/SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
@@ -85,7 +82,6 @@ jobs:
           name: KotenOCR-windows
           path: |
             src-tauri/target/release/bundle/nsis/*.exe
-            src-tauri/target/release/bundle/msi/*.msi
             src-tauri/target/release/bundle/SHA256SUMS.txt
           if-no-files-found: error
 
@@ -106,7 +102,6 @@ jobs:
         with:
           files: |
             dist-release/**/*.exe
-            dist-release/**/*.msi
             dist-release/**/*.zip
             dist-release/**/SHA256SUMS.txt
             dist-release/**/*.sha256
@@ -120,7 +115,7 @@ jobs:
             - USB配布時は、いったんローカルディスクにコピーしてから開くと速いです。
 
             ### ② Windows デスクトップアプリ（exe起動が許可された環境向け）
-            - `*.exe`(NSISインストーラ) または `*.msi`。WebView2 はオフライン同梱(x64)。
+            - `*.exe`(NSISインストーラ)。WebView2 はオフライン同梱(x64)。
             - 未署名のため、環境によっては SmartScreen/AppLocker で警告・ブロックされることがあります。
               その場合は①のHTML版をご利用ください。
 

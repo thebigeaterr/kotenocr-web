@@ -26,7 +26,7 @@ npm run preview  # ビルド物のプレビュー
 | | 形態 | 生成コマンド | 必要なもの | 向き |
 |---|---|---|---|---|
 | ① | **オフラインHTML版**（no-exe） | `npm run build:html` → `dist-html/` | ブラウザのみ（exe不要） | exe実行が禁止された環境でも**必ず動く**安全策 |
-| ② | **デスクトップアプリ**（Tauri / Windows） | CI（`.github/workflows/tauri.yml`）→ `.exe`/`.msi` | 未署名exe/インストーラを起動できること | 軽快・確実。USB配布→即起動 |
+| ② | **デスクトップアプリ**（Tauri / Windows） | CI（`.github/workflows/tauri.yml`）→ `.exe`(NSIS) | 未署名exeを起動できること | 軽快・確実。USB配布→即起動 |
 
 どちらも **OCRコードは共通**で、ビルドモードを出し分けているだけです。
 
@@ -40,12 +40,12 @@ npm run preview  # ビルド物のプレビュー
   - 巨大な画像（長辺6000px超など高DPIスキャン）は一時的に大きなメモリを使います。重い場合は縮小してから読み込んでください。
 
 ### ② デスクトップアプリ（Tauri）
-- `src-tauri/` に Tauri v2 構成。`npm run tauri build` で Windows の **NSIS(.exe)＋MSI** を生成します。
-- **Windows の .exe は macOS では作れません**（Tauri はホストOS向けのみ）。配布用 exe は **GitHub Actions（windows-latest）が唯一の生成手段**です。手動実行（Actions の workflow_dispatch）またはタグ push（`v*`）でビルドし、成果物（`.exe`/`.msi`/`SHA256SUMS.txt`）を Artifacts／Release から取得します。
+- `src-tauri/` に Tauri v2 構成。`npm run tauri build` で Windows の **NSIS インストーラ(.exe)** を生成します。
+- **Windows の .exe は macOS では作れません**（Tauri はホストOS向けのみ）。配布用 exe は **GitHub Actions（windows-latest）が唯一の生成手段**です。手動実行（Actions の workflow_dispatch）またはタグ push（`v*`）でビルドし、成果物（`.exe`/`SHA256SUMS.txt`）を Artifacts／Release から取得します。
 - WebView2 は **オフラインインストーラ同梱**（`tauri.conf.json`）。エアギャップでもランタイム導入可能（**x64前提**）。
 - **役所PCでの起動可否（重要）**：本アプリは**未署名**です。環境によっては次でブロックされます。
   - **SmartScreen**：「Windows によって PC が保護されました」→ 詳細→実行（評判が無いため警告が出やすい）。
-  - **AppLocker / WDAC**：「署名されていない実行ファイルは実行不可」ポリシーだと**起動自体が不可**。この場合は組織のコード署名、または **MSI を GPO/Intune/SCCM で管理者配布**する経路が現実的。
+  - **AppLocker / WDAC**：「署名されていない実行ファイルは実行不可」ポリシーだと**起動自体が不可**。この場合は組織のコード署名が現実的（必要なら `bundle.targets` に `"msi"` を足して GPO/Intune/SCCM 管理者配布向け MSI も生成できます）。
   - **USB の MOTW（Mark-of-the-Web）**：右クリック→プロパティ→「ブロックの解除」で警告を抑制。
   - → **exe が弾かれる環境では ①オフラインHTML版が同一PCで動く実証済みフォールバック**になります。
 - より確実にしたい場合は、WebView2 を `fixedRuntime`（固定版を同梱・導入工程ゼロ）にしてポータブル配布する選択肢もあります（要：固定版ランタイムの同梱設定）。
